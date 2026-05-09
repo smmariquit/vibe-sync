@@ -23,8 +23,8 @@ export function listExtensions(p: DetectedPlatform): ExtensionInfo[] {
   const bin = findCliBin(p);
   if (bin) {
     const res = spawnSync(bin, ["--list-extensions", "--show-versions"], { encoding: "utf8" });
-    if (res.status === 0 && res.stdout) return parseCliList(res.stdout);
-    log.warn(`${p.def.displayName}: '${bin} --list-extensions' failed (${res.status}), falling back to filesystem scan.`);
+    if (res.status === 0) return parseCliList(res.stdout ?? "");
+    log.warn(`${p.def.displayName}: '${bin} --list-extensions' exited ${res.status}, falling back to filesystem scan.`);
   }
   return scanExtensionsDir(p.paths.extensionsDir);
 }
@@ -46,14 +46,44 @@ function parseCliList(stdout: string): ExtensionInfo[] {
 
 function scanExtensionsDir(dir: string): ExtensionInfo[] {
   if (!existsSync(dir)) return [];
+
+  const manifestPath = join(dir, "extensions.json");
+  if (existsSync(manifestPath)) {
+    try {
+      const entries = JSON.parse(readFileSync(manifestPath, "utf8")) as Array<{
+        identifier?: { id?: string };
+        version?: string;
+      }>;
+      if (Array.isArray(entries)) {
+        return dedupe(
+          entries
+            .map((e) => ({
+              id: (e.identifier?.id ?? "").toLowerCase(),
+              version: e.version,
+              source: "fs" as const,
+            }))
+            .filter((e) => e.id),
+        );
+      }
+    } catch {
+      // fall through to folder walk
+    }
+  }
+
+  const obsolete = readObsolete(dir);
   const out: ExtensionInfo[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
+    if (obsolete.has(entry.name)) continue;
     const full = join(dir, entry.name);
-    const manifest = join(full, "package.json");
-    if (existsSync(manifest)) {
+    const pkgPath = join(full, "package.json");
+    if (existsSync(pkgPath)) {
       try {
-        const pkg = JSON.parse(readFileSync(manifest, "utf8")) as { publisher?: string; name?: string; version?: string };
+        const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as {
+          publisher?: string;
+          name?: string;
+          version?: string;
+        };
         if (pkg.publisher && pkg.name) {
           out.push({ id: `${pkg.publisher}.${pkg.name}`.toLowerCase(), version: pkg.version, source: "fs" });
           continue;
@@ -70,6 +100,20 @@ function scanExtensionsDir(dir: string): ExtensionInfo[] {
     }
   }
   return dedupe(out);
+}
+
+function readObsolete(dir: string): Set<string> {
+  const path = join(dir, ".obsolete");
+  if (!existsSync(path)) return new Set();
+  try {
+    const raw = readFileSync(path, "utf8").trim();
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw) as Record<string, boolean> | string[];
+    if (Array.isArray(parsed)) return new Set(parsed);
+    return new Set(Object.keys(parsed).filter((k) => parsed[k]));
+  } catch {
+    return new Set();
+  }
 }
 
 function dedupe(items: ExtensionInfo[]): ExtensionInfo[] {
