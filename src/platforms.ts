@@ -1,4 +1,4 @@
-import { existsSync, statSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { homedir, platform as osPlatform } from "node:os";
 import { join } from "node:path";
 
@@ -10,6 +10,7 @@ export type PlatformId =
   | "windsurf"
   | "trae"
   | "void"
+  | "hanzo"
   | "antigravity"
   | "positron";
 
@@ -155,6 +156,23 @@ export const PLATFORMS: PlatformDef[] = [
     },
   },
   {
+    id: "hanzo",
+    displayName: "Hanzo Code",
+    cliBin: ["hanzo"],
+    linux: {
+      userDataDir: join(HOME, ".config", "Hanzo", "User"),
+      extensionsDir: join(HOME, ".hanzo", "extensions"),
+    },
+    darwin: {
+      userDataDir: macUser("Hanzo"),
+      extensionsDir: join(HOME, ".hanzo", "extensions"),
+    },
+    win32: {
+      userDataDir: join(APPDATA, "Hanzo", "User"),
+      extensionsDir: join(HOME, ".hanzo", "extensions"),
+    },
+  },
+  {
     id: "antigravity",
     displayName: "Google Antigravity",
     cliBin: ["antigravity"],
@@ -263,6 +281,7 @@ export const EXCLUSIVE_PUBLISHERS: Record<PlatformId, string[]> = {
   windsurf: ["codeium.", "windsurf."],
   trae: ["trae."],
   void: ["void."],
+  hanzo: ["hanzo."],
   vscodium: [],
   positron: ["posit."],
 };
@@ -273,4 +292,16 @@ export function isIncompatible(extensionId: string, target: PlatformId): boolean
     if (prefixes.some((p) => extensionId.startsWith(p))) return true;
   }
   return false;
+}
+
+export function listProfiles(p: DetectedPlatform): string[] {
+  const dir = join(p.paths.userDataDir, "profiles");
+  if (!isDir(dir)) return [];
+  try {
+    return readdirSync(dir, { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name);
+  } catch {
+    return [];
+  }
 }

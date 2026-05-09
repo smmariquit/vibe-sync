@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import prompts from "prompts";
 
-import { detectInstalled, resolvePlatform, type DetectedPlatform } from "../platforms.js";
+import { detectInstalled, listProfiles, resolvePlatform, type DetectedPlatform } from "../platforms.js";
 import { applyExtensionPlan, listExtensions, planExtensionSync } from "../sync/extensions.js";
 import { SYNC_KINDS, syncFiles, type SyncKind } from "../sync/files.js";
 import { c, log } from "../utils/log.js";
@@ -116,6 +116,15 @@ export async function runSync(opts: SyncOptions): Promise<number> {
   if (!opts.yes && !opts.dryRun) {
     const { ok } = await prompts({ type: "confirm", name: "ok", message: "Proceed?", initial: true });
     if (!ok) { log.warn("Aborted."); return 0; }
+  }
+
+  for (const p of [source, ...targets]) {
+    const profs = listProfiles(p);
+    if (profs.length > 0) {
+      log.warn(
+        `${p.def.displayName} has named profiles (${profs.join(", ")}). vibe-sync only touches the Default profile; use the editor's profile UI to manage the rest.`,
+      );
+    }
   }
 
   let exitCode = 0;

@@ -1,14 +1,14 @@
 import { existsSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import type { DetectedPlatform } from "../platforms.js";
 import { backupPath, copyDir, copyFile, isDir, isFile, readFileIfExists, writeFileSafe } from "../utils/fs.js";
 import { mergeJsonc, parseJsonc, stringifyJsonc } from "../utils/jsonc.js";
 import { log } from "../utils/log.js";
 
-export type SyncKind = "settings" | "keybindings" | "tasks" | "snippets";
+export type SyncKind = "settings" | "keybindings" | "tasks" | "snippets" | "argv";
 
-export const SYNC_KINDS: SyncKind[] = ["settings", "keybindings", "tasks", "snippets"];
+export const SYNC_KINDS: SyncKind[] = ["settings", "keybindings", "tasks", "snippets", "argv"];
 
 export interface SyncFilesOptions {
   kinds: SyncKind[];
@@ -107,6 +107,10 @@ function syncSnippets(from: DetectedPlatform, to: DetectedPlatform, opts: SyncFi
   return { kind: "snippets", target: toDir, action: "wrote", files: copied };
 }
 
+function argvPath(p: DetectedPlatform): string {
+  return join(dirname(p.paths.extensionsDir), "argv.json");
+}
+
 export function syncFiles(from: DetectedPlatform, to: DetectedPlatform, opts: SyncFilesOptions): SyncFileResult[] {
   const results: SyncFileResult[] = [];
   const targetLabel = to.def.id;
@@ -114,6 +118,11 @@ export function syncFiles(from: DetectedPlatform, to: DetectedPlatform, opts: Sy
   for (const kind of opts.kinds) {
     if (kind === "snippets") {
       const r = syncSnippets(from, to, opts);
+      if (r) results.push(r);
+      continue;
+    }
+    if (kind === "argv") {
+      const r = syncJsoncFile(kind, argvPath(from), argvPath(to), opts, targetLabel);
       if (r) results.push(r);
       continue;
     }

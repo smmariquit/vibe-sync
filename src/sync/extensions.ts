@@ -29,17 +29,21 @@ export function listExtensions(p: DetectedPlatform): ExtensionInfo[] {
   return scanExtensionsDir(p.paths.extensionsDir);
 }
 
+const EXT_ID_RE = /^[a-z0-9][a-z0-9-]*\.[a-z0-9][a-z0-9-]+$/;
+
 function parseCliList(stdout: string): ExtensionInfo[] {
   const out: ExtensionInfo[] = [];
   for (const raw of stdout.split(/\r?\n/)) {
     const line = raw.trim();
     if (!line) continue;
     const at = line.lastIndexOf("@");
-    if (at > 0) {
-      out.push({ id: line.slice(0, at).toLowerCase(), version: line.slice(at + 1), source: "cli" });
-    } else {
-      out.push({ id: line.toLowerCase(), source: "cli" });
-    }
+    const id = (at > 0 ? line.slice(0, at) : line).toLowerCase();
+    if (!EXT_ID_RE.test(id)) continue;
+    out.push({
+      id,
+      version: at > 0 ? line.slice(at + 1) : undefined,
+      source: "cli",
+    });
   }
   return dedupe(out);
 }
