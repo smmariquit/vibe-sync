@@ -2,7 +2,7 @@ import { join } from "node:path";
 
 import { resolvePlatform, type DetectedPlatform } from "../platforms.js";
 import { listExtensions } from "../sync/extensions.js";
-import { readFileIfExists, isDir, listFilesRecursive } from "../utils/fs.js";
+import { listFilesRecursive, readFileIfExists } from "../utils/fs.js";
 import { c, log } from "../utils/log.js";
 
 export interface DiffOptions {
@@ -20,12 +20,7 @@ function listSnippets(p: DetectedPlatform): string[] {
 interface PlatformDiff {
   source: string;
   target: string;
-  files: {
-    name: string;
-    sourceBytes?: number;
-    targetBytes?: number;
-    equal: boolean;
-  }[];
+  files: { name: string; sourceBytes?: number; targetBytes?: number; equal: boolean }[];
   snippets: { onlyInSource: string[]; onlyInTarget: string[] };
   extensions: { onlyInSource: string[]; onlyInTarget: string[] };
 }
@@ -33,21 +28,13 @@ interface PlatformDiff {
 export function runDiff(a: string, b: string, opts: DiffOptions = {}): number {
   const A = resolvePlatform(a);
   const B = resolvePlatform(b);
-  if (!A || !B) {
-    log.error(`Unknown platform: ${!A ? a : b}`);
-    return 1;
-  }
+  if (!A || !B) { log.error(`Unknown platform: ${!A ? a : b}`); return 1; }
 
   const fileNames = ["settings.json", "keybindings.json", "tasks.json"];
-  const filesDiff = fileNames.map((name) => {
+  const files = fileNames.map((name) => {
     const sa = loadFile(A, name);
     const sb = loadFile(B, name);
-    return {
-      name,
-      sourceBytes: sa?.length,
-      targetBytes: sb?.length,
-      equal: sa === sb,
-    };
+    return { name, sourceBytes: sa?.length, targetBytes: sb?.length, equal: sa === sb };
   });
 
   const aSnips = new Set(listSnippets(A));
@@ -64,46 +51,27 @@ export function runDiff(a: string, b: string, opts: DiffOptions = {}): number {
     onlyInTarget: [...bExt].filter((e) => !aExt.has(e)).sort(),
   };
 
-  const result: PlatformDiff = {
-    source: A.def.id,
-    target: B.def.id,
-    files: filesDiff,
-    snippets,
-    extensions,
-  };
+  const result: PlatformDiff = { source: A.def.id, target: B.def.id, files, snippets, extensions };
 
-  if (opts.json) {
-    console.log(JSON.stringify(result, null, 2));
-    return 0;
-  }
+  if (opts.json) { console.log(JSON.stringify(result, null, 2)); return 0; }
 
   log.header(`Diff: ${A.def.displayName} ↔ ${B.def.displayName}`);
-  for (const f of filesDiff) {
+  for (const f of files) {
     const tag = f.equal ? c.green("equal") : c.yellow("differs");
-    const sa = f.sourceBytes ?? c.dim("absent");
-    const sb = f.targetBytes ?? c.dim("absent");
-    log.raw(`  ${f.name.padEnd(20)} ${tag}  ${c.dim(`${sa} vs ${sb} bytes`)}`);
+    log.raw(`  ${f.name.padEnd(20)} ${tag}  ${c.dim(`${f.sourceBytes ?? "absent"} vs ${f.targetBytes ?? "absent"} bytes`)}`);
   }
 
   log.raw("");
   log.raw(c.bold("Snippets"));
-  if (snippets.onlyInSource.length === 0 && snippets.onlyInTarget.length === 0)
-    log.dim("  identical");
-  for (const s of snippets.onlyInSource)
-    log.raw(`  ${c.green("+")} ${s} ${c.dim(`(only in ${A.def.id})`)}`);
-  for (const s of snippets.onlyInTarget)
-    log.raw(`  ${c.red("-")} ${s} ${c.dim(`(only in ${B.def.id})`)}`);
+  if (!snippets.onlyInSource.length && !snippets.onlyInTarget.length) log.dim("  identical");
+  for (const s of snippets.onlyInSource) log.raw(`  ${c.green("+")} ${s} ${c.dim(`(only in ${A.def.id})`)}`);
+  for (const s of snippets.onlyInTarget) log.raw(`  ${c.red("-")} ${s} ${c.dim(`(only in ${B.def.id})`)}`);
 
   log.raw("");
   log.raw(c.bold("Extensions"));
-  if (extensions.onlyInSource.length === 0 && extensions.onlyInTarget.length === 0)
-    log.dim("  identical");
-  for (const e of extensions.onlyInSource)
-    log.raw(`  ${c.green("+")} ${e} ${c.dim(`(only in ${A.def.id})`)}`);
-  for (const e of extensions.onlyInTarget)
-    log.raw(`  ${c.red("-")} ${e} ${c.dim(`(only in ${B.def.id})`)}`);
+  if (!extensions.onlyInSource.length && !extensions.onlyInTarget.length) log.dim("  identical");
+  for (const e of extensions.onlyInSource) log.raw(`  ${c.green("+")} ${e} ${c.dim(`(only in ${A.def.id})`)}`);
+  for (const e of extensions.onlyInTarget) log.raw(`  ${c.red("-")} ${e} ${c.dim(`(only in ${B.def.id})`)}`);
 
   return 0;
 }
-
-void isDir;

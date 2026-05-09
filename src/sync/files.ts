@@ -2,40 +2,19 @@ import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 import type { DetectedPlatform } from "../platforms.js";
-import {
-  backupPath,
-  copyDir,
-  copyFile,
-  isDir,
-  isFile,
-  readFileIfExists,
-  writeFileSafe,
-} from "../utils/fs.js";
-import {
-  mergeJsonc,
-  parseJsonc,
-  stringifyJsonc,
-} from "../utils/jsonc.js";
+import { backupPath, copyDir, copyFile, isDir, isFile, readFileIfExists, writeFileSafe } from "../utils/fs.js";
+import { mergeJsonc, parseJsonc, stringifyJsonc } from "../utils/jsonc.js";
 import { log } from "../utils/log.js";
 
 export type SyncKind = "settings" | "keybindings" | "tasks" | "snippets";
 
-export const SYNC_KINDS: SyncKind[] = [
-  "settings",
-  "keybindings",
-  "tasks",
-  "snippets",
-];
+export const SYNC_KINDS: SyncKind[] = ["settings", "keybindings", "tasks", "snippets"];
 
 export interface SyncFilesOptions {
   kinds: SyncKind[];
-  /** When true, deep-merge JSONC files instead of overwriting. */
   merge: boolean;
-  /** When true, do not write — only report what would change. */
   dryRun: boolean;
-  /** Root directory to write timestamped backups under (per-target). */
   backupRoot: string;
-  /** Skip backups entirely (dangerous). */
   noBackup: boolean;
 }
 
@@ -63,17 +42,11 @@ function syncJsoncFile(
   const sourceText = readFileIfExists(fromPath);
   if (sourceText === undefined) return undefined;
 
-  // Decide write vs merge.
   const targetExists = isFile(toPath);
   const willMerge = opts.merge && targetExists;
 
   if (opts.dryRun) {
-    return {
-      kind: label,
-      target: toPath,
-      action: willMerge ? "would-merge" : "would-write",
-      bytes: sourceText.length,
-    };
+    return { kind: label, target: toPath, action: willMerge ? "would-merge" : "would-write", bytes: sourceText.length };
   }
 
   if (!opts.noBackup && targetExists) {
@@ -84,16 +57,12 @@ function syncJsoncFile(
   if (willMerge) {
     const targetText = readFileIfExists(toPath) ?? "{}";
     try {
-      const baseObj = parseJsonc<Record<string, unknown>>(targetText);
-      const incomingObj = parseJsonc<Record<string, unknown>>(sourceText);
-      // keybindings.json is an array — merging means concatenating then
-      // deduplicating by stringified entry.
-      if (Array.isArray(baseObj) || Array.isArray(incomingObj)) {
-        const baseArr = Array.isArray(baseObj) ? baseObj : [];
-        const incArr = Array.isArray(incomingObj) ? incomingObj : [];
+      const base = parseJsonc<Record<string, unknown>>(targetText);
+      const incoming = parseJsonc<Record<string, unknown>>(sourceText);
+      if (Array.isArray(base) || Array.isArray(incoming)) {
         const seen = new Set<string>();
         const merged: unknown[] = [];
-        for (const item of [...baseArr, ...incArr]) {
+        for (const item of [...(Array.isArray(base) ? base : []), ...(Array.isArray(incoming) ? incoming : [])]) {
           const key = JSON.stringify(item);
           if (seen.has(key)) continue;
           seen.add(key);
@@ -101,32 +70,18 @@ function syncJsoncFile(
         }
         finalText = stringifyJsonc(merged);
       } else {
-        const merged = mergeJsonc(baseObj, incomingObj);
-        finalText = stringifyJsonc(merged);
+        finalText = stringifyJsonc(mergeJsonc(base, incoming));
       }
     } catch (err) {
-      log.warn(
-        `Could not merge ${label} (parse error: ${
-          (err as Error).message
-        }). Falling back to overwrite.`,
-      );
+      log.warn(`Could not merge ${label} (${(err as Error).message}), falling back to overwrite.`);
     }
   }
 
   writeFileSafe(toPath, finalText);
-  return {
-    kind: label,
-    target: toPath,
-    action: willMerge ? "merged" : "wrote",
-    bytes: finalText.length,
-  };
+  return { kind: label, target: toPath, action: willMerge ? "merged" : "wrote", bytes: finalText.length };
 }
 
-function syncSnippets(
-  from: DetectedPlatform,
-  to: DetectedPlatform,
-  opts: SyncFilesOptions,
-): SyncFileResult | undefined {
+function syncSnippets(from: DetectedPlatform, to: DetectedPlatform, opts: SyncFilesOptions): SyncFileResult | undefined {
   const fromDir = userPath(from, "snippets");
   const toDir = userPath(to, "snippets");
   if (!isDir(fromDir)) return undefined;
@@ -141,27 +96,18 @@ function syncSnippets(
       }
     };
     walk(fromDir);
-    return {
-      kind: "snippets",
-      target: toDir,
-      action: "would-write",
-      files: count,
-    };
+    return { kind: "snippets", target: toDir, action: "would-write", files: count };
   }
 
   if (!opts.noBackup && existsSync(toDir)) {
     backupPath(toDir, opts.backupRoot, `${to.def.id}/snippets`);
   }
 
-  const copied = copyDir(fromDir, toDir, /* overwrite */ true);
+  const copied = copyDir(fromDir, toDir, true);
   return { kind: "snippets", target: toDir, action: "wrote", files: copied };
 }
 
-export function syncFiles(
-  from: DetectedPlatform,
-  to: DetectedPlatform,
-  opts: SyncFilesOptions,
-): SyncFileResult[] {
+export function syncFiles(from: DetectedPlatform, to: DetectedPlatform, opts: SyncFilesOptions): SyncFileResult[] {
   const results: SyncFileResult[] = [];
   const targetLabel = to.def.id;
 
@@ -171,31 +117,17 @@ export function syncFiles(
       if (r) results.push(r);
       continue;
     }
-    const filename =
-      kind === "settings"
-        ? "settings.json"
-        : kind === "keybindings"
-          ? "keybindings.json"
-          : "tasks.json";
-    const fromPath = userPath(from, filename);
-    const toPath = userPath(to, filename);
-    const r = syncJsoncFile(kind, fromPath, toPath, opts, targetLabel);
+    const filename = kind === "settings" ? "settings.json" : kind === "keybindings" ? "keybindings.json" : "tasks.json";
+    const r = syncJsoncFile(kind, userPath(from, filename), userPath(to, filename), opts, targetLabel);
     if (r) results.push(r);
   }
 
   return results;
 }
 
-/** Copy a path verbatim (used for export/import bundles). */
 export function copyAny(src: string, dest: string): boolean {
   if (!existsSync(src)) return false;
-  if (isDir(src)) {
-    copyDir(src, dest, true);
-    return true;
-  }
-  if (isFile(src)) {
-    copyFile(src, dest);
-    return true;
-  }
+  if (isDir(src)) { copyDir(src, dest, true); return true; }
+  if (isFile(src)) { copyFile(src, dest); return true; }
   return false;
 }

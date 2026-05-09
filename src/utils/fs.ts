@@ -81,16 +81,7 @@ export function isDir(p: string): boolean {
   }
 }
 
-/**
- * Snapshot a path under <backupRoot>/<isoTimestamp>/<label>/...
- * Returns the absolute backup path that was created (or undefined when nothing
- * existed to back up).
- */
-export function backupPath(
-  src: string,
-  backupRoot: string,
-  label: string,
-): string | undefined {
+export function backupPath(src: string, backupRoot: string, label: string): string | undefined {
   if (!existsSync(src)) return undefined;
   const ts = new Date().toISOString().replace(/[:.]/g, "-");
   const dest = resolve(backupRoot, ts, label);

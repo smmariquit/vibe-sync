@@ -1,11 +1,11 @@
 {
-  "name": "vibe-sync",
+  "name": "@stimmieuwu/vibe-sync",
   "version": "0.1.0",
   "description": "Sync settings, keybindings, snippets, and extensions across VSCode-fork 'vibe coding' platforms (Cursor, Windsurf, Trae, Antigravity, Void, VSCodium, VSCode).",
   "type": "module",
   "bin": {
-    "vibe-sync": "./dist/cli.js",
-    "vsync": "./dist/cli.js"
+    "vibe-sync": "dist/cli.js",
+    "vsync": "dist/cli.js"
   },
   "files": [
     "dist",
@@ -13,11 +13,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/stimmie/vibe-sync.git"
+    "url": "git+https://github.com/smmariquit/vibe-sync.git"
   },
-  "homepage": "https://github.com/stimmie/vibe-sync#readme",
+  "homepage": "https://github.com/smmariquit/vibe-sync#readme",
   "bugs": {
-    "url": "https://github.com/stimmie/vibe-sync/issues"
+    "url": "https://github.com/smmariquit/vibe-sync/issues"
   },
   "publishConfig": {
     "access": "public"

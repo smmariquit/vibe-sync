@@ -2,21 +2,6 @@ import { existsSync, statSync } from "node:fs";
 import { homedir, platform as osPlatform } from "node:os";
 import { join } from "node:path";
 
-/**
- * Catalog of known VSCode-family "vibe coding" editors and the canonical
- * locations they use for user-scoped data.
- *
- * Layout convention shared by every fork (because they all descend from VS Code):
- *   <userDataDir>/User/settings.json
- *   <userDataDir>/User/keybindings.json
- *   <userDataDir>/User/tasks.json
- *   <userDataDir>/User/snippets/*.json
- *   <userDataDir>/User/globalStorage/  (we treat as opaque, optional)
- *   <extensionsDir>/                   (one folder per <publisher>.<name>-<ver>)
- *
- * The CLI binary name (`cliBin`) is whatever the fork ships on PATH; it is used
- * to list/install extensions reliably (the API is identical to `code`).
- */
 export type PlatformId =
   | "vscode"
   | "vscode-insiders"
@@ -49,12 +34,6 @@ function macUser(name: string): string {
   return join(HOME, "Library", "Application Support", name, "User");
 }
 
-/**
- * Why explicit per-OS paths instead of clever heuristics:
- * each fork bakes its product name + extension folder into its build, and
- * deviating one byte breaks loading. We mirror what each editor itself
- * computes via Electron's `app.getPath('userData')`.
- */
 export const PLATFORMS: PlatformDef[] = [
   {
     id: "vscode",
@@ -240,13 +219,7 @@ export function getPlatform(id: PlatformId): DetectedPlatform | undefined {
   const paths = pathsFor(def);
   const hasUserData = isDir(paths.userDataDir);
   const hasExtensions = isDir(paths.extensionsDir);
-  return {
-    def,
-    paths,
-    installed: hasUserData || hasExtensions,
-    hasUserData,
-    hasExtensions,
-  };
+  return { def, paths, installed: hasUserData || hasExtensions, hasUserData, hasExtensions };
 }
 
 export function detectAll(): DetectedPlatform[] {
@@ -254,13 +227,7 @@ export function detectAll(): DetectedPlatform[] {
     const paths = pathsFor(def);
     const hasUserData = isDir(paths.userDataDir);
     const hasExtensions = isDir(paths.extensionsDir);
-    return {
-      def,
-      paths,
-      installed: hasUserData || hasExtensions,
-      hasUserData,
-      hasExtensions,
-    };
+    return { def, paths, installed: hasUserData || hasExtensions, hasUserData, hasExtensions };
   });
 }
 
@@ -274,7 +241,7 @@ export function resolvePlatform(idOrAlias: string): DetectedPlatform | undefined
     (p) => p.id === norm || p.displayName.toLowerCase() === norm,
   );
   if (direct) return getPlatform(direct.id);
-  const aliasMap: Record<string, PlatformId> = {
+  const aliases: Record<string, PlatformId> = {
     code: "vscode",
     vsc: "vscode",
     insiders: "vscode-insiders",
@@ -284,6 +251,6 @@ export function resolvePlatform(idOrAlias: string): DetectedPlatform | undefined
     ag: "antigravity",
     google: "antigravity",
   };
-  const alias = aliasMap[norm];
+  const alias = aliases[norm];
   return alias ? getPlatform(alias) : undefined;
 }

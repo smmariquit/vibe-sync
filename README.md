@@ -22,20 +22,20 @@ Adding more is a one-line patch in `src/platforms.ts`.
 
 ## Why
 
-Every fork stores user data under its own product name (`~/.config/Cursor/User`, `~/.config/Code/User`, `~/.config/Antigravity/User`, …), and extensions in a parallel `~/.<editor>/extensions` tree. Their on-disk layouts are identical to upstream VS Code's, but nothing in the box keeps them in sync. `vibe-sync` automates the boring 90% — copy the JSONC config files, copy the snippets folder, and run `<editor> --install-extension <id>` for every missing extension on each target.
+Every fork stores user data under its own product name (`~/.config/Cursor/User`, `~/.config/Code/User`, `~/.config/Antigravity/User`, …), and extensions in a parallel `~/.<editor>/extensions` tree. Their on-disk layouts are identical to upstream VS Code's, but nothing in the box keeps them in sync. `vibe-sync` automates the boring 90%. It copies the JSONC config files, the snippets folder, and runs `<editor> --install-extension <id>` for every missing extension on each target.
 
 ## Install
 
 ```bash
-# from a checkout
-pnpm install        # or: npm install / bun install
-pnpm build
-npm link            # exposes `vibe-sync` and `vsync` on your PATH
+npm install -g @stimmieuwu/vibe-sync
+# or run without installing
+npx @stimmieuwu/vibe-sync detect
 ```
 
-Or run it directly during development:
+From a checkout (for hacking on it):
 
 ```bash
+pnpm install
 pnpm dev -- detect --all
 ```
 
@@ -62,7 +62,7 @@ vibe-sync ext sync cursor windsurf --prune
 
 # Snapshot a profile to disk and apply it on another machine
 vibe-sync export cursor --out ./my-profile
-# … later, on another box …
+# ... later, on another box ...
 vibe-sync import ./my-profile windsurf
 ```
 
@@ -89,7 +89,7 @@ Run `vibe-sync <cmd> --help` for the full flag list.
 - `snippets/` (every file inside, recursively)
 - Extensions (via the editor's own `--list-extensions` / `--install-extension` CLI; falls back to scanning the extensions directory when the CLI isn't on `PATH`)
 
-`globalStorage/`, `workspaceStorage/`, `History/`, secrets, and the editor's UI state are intentionally **not** synced — they're machine-local and editor-specific, and copying them across forks is the fast way to corrupt your install.
+`globalStorage/`, `workspaceStorage/`, `History/`, secrets, and the editor's UI state are intentionally **not** synced. They're machine-local and editor-specific, and copying them across forks is the fast way to corrupt your install.
 
 ## Safety
 
