@@ -1,0 +1,64 @@
+{
+  "name": "vibe-sync",
+  "version": "0.1.0",
+  "description": "Sync settings, keybindings, snippets, and extensions across VSCode-fork 'vibe coding' platforms (Cursor, Windsurf, Trae, Antigravity, Void, VSCodium, VSCode).",
+  "type": "module",
+  "bin": {
+    "vibe-sync": "./dist/cli.js",
+    "vsync": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stimmie/vibe-sync.git"
+  },
+  "homepage": "https://github.com/stimmie/vibe-sync#readme",
+  "bugs": {
+    "url": "https://github.com/stimmie/vibe-sync/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "build:bin": "bun build src/cli.ts --compile --outfile bin/vibe-sync",
+    "dev": "tsx src/cli.ts",
+    "start": "node dist/cli.js",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "vscode",
+    "cursor",
+    "windsurf",
+    "trae",
+    "antigravity",
+    "void",
+    "vscodium",
+    "settings",
+    "extensions",
+    "sync",
+    "vibe-coding",
+    "cli"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "comment-json": "^4.2.5",
+    "picocolors": "^1.1.1",
+    "prompts": "^2.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/prompts": "^2.4.9",
+    "tsup": "^8.3.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

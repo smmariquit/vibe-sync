@@ -1,0 +1,8 @@
+src/
+.github/
+tsconfig.json
+tsup.config.ts
+*.log
+node_modules/
+vibe-sync-backups/
+bin/
