@@ -24,6 +24,7 @@ export function runExtList(platformId: string, opts: ExtListOptions): number {
 export interface ExtSyncOptions {
   prune?: boolean;
   dryRun?: boolean;
+  includeIncompatible?: boolean;
 }
 
 export function runExtSync(fromId: string, toId: string, opts: ExtSyncOptions): number {
@@ -31,10 +32,17 @@ export function runExtSync(fromId: string, toId: string, opts: ExtSyncOptions): 
   const to = resolvePlatform(toId);
   if (!from || !to) { log.error(`Unknown platform: ${!from ? fromId : toId}`); return 1; }
 
-  const plan = planExtensionSync(listExtensions(from), listExtensions(to), { prune: Boolean(opts.prune) });
-  log.header(`Extensions: ${from.def.displayName} → ${to.def.displayName}  (+${plan.toInstall.length} / -${plan.toRemove.length})`);
+  const plan = planExtensionSync(listExtensions(from), listExtensions(to), {
+    prune: Boolean(opts.prune),
+    targetPlatform: to.def.id,
+    includeIncompatible: Boolean(opts.includeIncompatible),
+  });
+  const skipBadge = plan.skippedIncompatible.length ? ` / ~${plan.skippedIncompatible.length}` : "";
+  log.header(`Extensions: ${from.def.displayName} → ${to.def.displayName}  (+${plan.toInstall.length} / -${plan.toRemove.length}${skipBadge})`);
   for (const id of plan.toInstall) log.raw(`  ${c.green("+")} ${id}`);
   for (const id of plan.toRemove) log.raw(`  ${c.red("-")} ${id}`);
+  for (const id of plan.skippedIncompatible)
+    log.raw(`  ${c.yellow("~")} ${id} ${c.dim("(skipped: not available on this fork)")}`);
 
   const applied = applyExtensionPlan(to, plan, { dryRun: Boolean(opts.dryRun) });
   if (applied.failedInstall.length || applied.failedRemove.length) {

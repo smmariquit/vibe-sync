@@ -20,6 +20,7 @@ export interface SyncOptions {
   yes?: boolean;
   noBackup?: boolean;
   backupDir?: string;
+  includeIncompatible?: boolean;
 }
 
 const DEFAULT_BACKUP = join(process.cwd(), "vibe-sync-backups");
@@ -146,10 +147,19 @@ export async function runSync(opts: SyncOptions): Promise<number> {
     }
 
     if (doExt) {
-      const plan = planExtensionSync(listExtensions(source), listExtensions(target), { prune: Boolean(opts.prune) });
-      log.raw(`   extensions: ${c.green(`+${plan.toInstall.length}`)} ${c.red(`-${plan.toRemove.length}`)} ${c.dim(`(=${plan.alreadyPresent.length})`)}`);
+      const plan = planExtensionSync(listExtensions(source), listExtensions(target), {
+        prune: Boolean(opts.prune),
+        targetPlatform: target.def.id,
+        includeIncompatible: Boolean(opts.includeIncompatible),
+      });
+      const skipBadge = plan.skippedIncompatible.length
+        ? ` ${c.yellow(`~${plan.skippedIncompatible.length}`)}`
+        : "";
+      log.raw(`   extensions: ${c.green(`+${plan.toInstall.length}`)} ${c.red(`-${plan.toRemove.length}`)}${skipBadge} ${c.dim(`(=${plan.alreadyPresent.length})`)}`);
       for (const id of plan.toInstall) log.dim(`     + ${id}`);
       for (const id of plan.toRemove) log.dim(`     - ${id}`);
+      for (const id of plan.skippedIncompatible)
+        log.dim(`     ~ ${id} ${c.dim("(skipped: not available on this fork)")}`);
       const applied = applyExtensionPlan(target, plan, { dryRun: Boolean(opts.dryRun) });
       if (applied.failedInstall.length || applied.failedRemove.length) {
         exitCode = 2;

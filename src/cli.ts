@@ -49,6 +49,7 @@ function makeProgram(): Command {
     .option("-y, --yes", "Skip the confirmation prompt.", false)
     .option("--no-backup", "Don't snapshot target files before writing.")
     .option("--backup-dir <path>", "Directory for timestamped backups (default: ./vibe-sync-backups).")
+    .option("--include-incompatible", "Try to install fork-exclusive extensions even when they're known to fail (e.g. anysphere.* on Antigravity).", false)
     .action(async (opts) => {
       const code = await runSync({
         from: opts.from,
@@ -64,6 +65,7 @@ function makeProgram(): Command {
         yes: opts.yes,
         noBackup: !opts.backup,
         backupDir: opts.backupDir,
+        includeIncompatible: opts.includeIncompatible,
       });
       process.exit(code);
     });
@@ -89,8 +91,14 @@ function makeProgram(): Command {
     .option("--prune", "Remove extensions on target that aren't in the bundle.", false)
     .option("--no-extensions", "Skip installing extensions from the bundle.")
     .option("-n, --dry-run", "Show what would change without writing.", false)
+    .option("--include-incompatible", "Try to install fork-exclusive extensions even when they're known to fail.", false)
     .action((bundle: string, platform: string, opts) =>
-      process.exit(runImport(bundle, platform, { prune: opts.prune, noExtensions: !opts.extensions, dryRun: opts.dryRun })),
+      process.exit(runImport(bundle, platform, {
+        prune: opts.prune,
+        noExtensions: !opts.extensions,
+        dryRun: opts.dryRun,
+        includeIncompatible: opts.includeIncompatible,
+      })),
     );
 
   const ext = program.command("extensions").alias("ext").description("Inspect or sync extensions only.");
@@ -104,8 +112,13 @@ function makeProgram(): Command {
     .description("Sync extensions from one platform to another.")
     .option("--prune", "Remove extensions on <to> that aren't in <from>.", false)
     .option("-n, --dry-run", "Show what would change without writing.", false)
+    .option("--include-incompatible", "Try to install fork-exclusive extensions even when they're known to fail.", false)
     .action((from: string, to: string, opts) =>
-      process.exit(runExtSync(from, to, { prune: opts.prune, dryRun: opts.dryRun })),
+      process.exit(runExtSync(from, to, {
+        prune: opts.prune,
+        dryRun: opts.dryRun,
+        includeIncompatible: opts.includeIncompatible,
+      })),
     );
 
   return program;

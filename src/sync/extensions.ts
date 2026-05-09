@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import type { DetectedPlatform } from "../platforms.js";
+import { isIncompatible, type DetectedPlatform, type PlatformId } from "../platforms.js";
 import { log } from "../utils/log.js";
 
 export interface ExtensionInfo {
@@ -85,21 +85,46 @@ export interface ExtensionSyncPlan {
   toInstall: string[];
   toRemove: string[];
   alreadyPresent: string[];
+  skippedIncompatible: string[];
 }
 
-export function planExtensionSync(source: ExtensionInfo[], target: ExtensionInfo[], options: { prune: boolean }): ExtensionSyncPlan {
+export interface PlanOptions {
+  prune: boolean;
+  targetPlatform?: PlatformId;
+  includeIncompatible?: boolean;
+}
+
+export function planExtensionSync(source: ExtensionInfo[], target: ExtensionInfo[], options: PlanOptions): ExtensionSyncPlan {
   const sourceIds = new Set(source.map((e) => e.id));
   const targetIds = new Set(target.map((e) => e.id));
 
   const toInstall: string[] = [];
   const alreadyPresent: string[] = [];
+  const skippedIncompatible: string[] = [];
+
   for (const id of sourceIds) {
-    if (targetIds.has(id)) alreadyPresent.push(id);
-    else toInstall.push(id);
+    if (targetIds.has(id)) {
+      alreadyPresent.push(id);
+      continue;
+    }
+    if (
+      !options.includeIncompatible &&
+      options.targetPlatform &&
+      isIncompatible(id, options.targetPlatform)
+    ) {
+      skippedIncompatible.push(id);
+      continue;
+    }
+    toInstall.push(id);
   }
   const toRemove = options.prune ? [...targetIds].filter((id) => !sourceIds.has(id)) : [];
 
-  return { toInstall: toInstall.sort(), toRemove: toRemove.sort(), alreadyPresent: alreadyPresent.sort() };
+  return {
+    toInstall: toInstall.sort(),
+    toRemove: toRemove.sort(),
+    alreadyPresent: alreadyPresent.sort(),
+    skippedIncompatible: skippedIncompatible.sort(),
+  };
 }
 
 export interface ApplyResult {

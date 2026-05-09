@@ -254,3 +254,23 @@ export function resolvePlatform(idOrAlias: string): DetectedPlatform | undefined
   const alias = aliases[norm];
   return alias ? getPlatform(alias) : undefined;
 }
+
+export const EXCLUSIVE_PUBLISHERS: Record<PlatformId, string[]> = {
+  cursor: ["anysphere."],
+  vscode: ["ms-vscode.cpptools", "ms-vscode.remote-", "ms-vscode-remote.", "ms-vsliveshare."],
+  "vscode-insiders": ["ms-vscode.cpptools", "ms-vscode.remote-", "ms-vscode-remote.", "ms-vsliveshare."],
+  antigravity: ["google.", "googlecloudtools."],
+  windsurf: ["codeium.", "windsurf."],
+  trae: ["trae."],
+  void: ["void."],
+  vscodium: [],
+  positron: ["posit."],
+};
+
+export function isIncompatible(extensionId: string, target: PlatformId): boolean {
+  for (const [owner, prefixes] of Object.entries(EXCLUSIVE_PUBLISHERS) as [PlatformId, string[]][]) {
+    if (owner === target) continue;
+    if (prefixes.some((p) => extensionId.startsWith(p))) return true;
+  }
+  return false;
+}

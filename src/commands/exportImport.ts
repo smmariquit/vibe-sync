@@ -53,6 +53,7 @@ export interface ImportOptions {
   prune?: boolean;
   noExtensions?: boolean;
   dryRun?: boolean;
+  includeIncompatible?: boolean;
 }
 
 export function runImport(bundlePath: string, platformId: string, opts: ImportOptions): number {
@@ -83,8 +84,15 @@ export function runImport(bundlePath: string, platformId: string, opts: ImportOp
   }
 
   if (!opts.noExtensions && meta.extensions?.length) {
-    const plan = planExtensionSync(meta.extensions, listExtensions(target), { prune: Boolean(opts.prune) });
-    log.raw(`extensions: ${c.green(`+${plan.toInstall.length}`)} ${c.red(`-${plan.toRemove.length}`)} ${c.dim(`(=${plan.alreadyPresent.length})`)}`);
+    const plan = planExtensionSync(meta.extensions, listExtensions(target), {
+      prune: Boolean(opts.prune),
+      targetPlatform: target.def.id,
+      includeIncompatible: Boolean(opts.includeIncompatible),
+    });
+    const skipBadge = plan.skippedIncompatible.length ? ` ${c.yellow(`~${plan.skippedIncompatible.length}`)}` : "";
+    log.raw(`extensions: ${c.green(`+${plan.toInstall.length}`)} ${c.red(`-${plan.toRemove.length}`)}${skipBadge} ${c.dim(`(=${plan.alreadyPresent.length})`)}`);
+    for (const id of plan.skippedIncompatible)
+      log.dim(`  ~ ${id} (skipped: not available on this fork)`);
     const applied = applyExtensionPlan(target, plan, { dryRun: Boolean(opts.dryRun) });
     if (applied.failedInstall.length || applied.failedRemove.length) {
       for (const f of applied.failedInstall) log.warn(`install failed: ${f.id} — ${f.reason}`);
