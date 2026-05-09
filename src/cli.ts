@@ -8,6 +8,7 @@ import { runExport, runImport } from "./commands/exportImport.js";
 import { runSync } from "./commands/sync.js";
 import { PLATFORMS } from "./platforms.js";
 import { log } from "./utils/log.js";
+import pkg from "../package.json" with { type: "json" };
 
 const PLATFORM_IDS = PLATFORMS.map((p) => p.id);
 
@@ -16,7 +17,7 @@ function makeProgram(): Command {
   program
     .name("vibe-sync")
     .description("Sync settings, keybindings, snippets, and extensions across VSCode-fork editors.")
-    .version("0.1.0")
+    .version(pkg.version)
     .showHelpAfterError();
 
   program

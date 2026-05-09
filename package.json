@@ -1,6 +1,6 @@
 {
   "name": "@stimmieuwu/vibe-sync",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Sync settings, keybindings, snippets, and extensions across VSCode-fork 'vibe coding' platforms (Cursor, Windsurf, Trae, Antigravity, Void, VSCodium, VSCode).",
   "type": "module",
   "bin": {
