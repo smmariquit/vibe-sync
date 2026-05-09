@@ -11,9 +11,15 @@ export interface ExtensionInfo {
   source: "cli" | "fs";
 }
 
+const IS_WIN = process.platform === "win32";
+
+function spawnEditor(bin: string, args: string[]) {
+  return spawnSync(bin, args, { encoding: "utf8", shell: IS_WIN });
+}
+
 function findCliBin(p: DetectedPlatform): string | undefined {
   for (const bin of p.def.cliBin) {
-    const result = spawnSync(process.platform === "win32" ? "where" : "which", [bin]);
+    const result = spawnSync(IS_WIN ? "where" : "which", [bin], { shell: IS_WIN });
     if (result.status === 0) return bin;
   }
   return undefined;
@@ -22,7 +28,7 @@ function findCliBin(p: DetectedPlatform): string | undefined {
 export function listExtensions(p: DetectedPlatform): ExtensionInfo[] {
   const bin = findCliBin(p);
   if (bin) {
-    const res = spawnSync(bin, ["--list-extensions", "--show-versions"], { encoding: "utf8" });
+    const res = spawnEditor(bin, ["--list-extensions", "--show-versions"]);
     if (res.status === 0) return parseCliList(res.stdout ?? "");
     log.warn(`${p.def.displayName}: '${bin} --list-extensions' exited ${res.status}, falling back to filesystem scan.`);
   }
@@ -182,7 +188,13 @@ export interface ApplyResult {
   failedRemove: { id: string; reason: string }[];
 }
 
-export function applyExtensionPlan(target: DetectedPlatform, plan: ExtensionSyncPlan, opts: { dryRun: boolean }): ApplyResult {
+export interface ApplyOptions {
+  dryRun: boolean;
+  onStart?: (label: string) => void;
+  onFinish?: (label: string, status: "ok" | "fail") => void;
+}
+
+export function applyExtensionPlan(target: DetectedPlatform, plan: ExtensionSyncPlan, opts: ApplyOptions): ApplyResult {
   const result: ApplyResult = { installed: [], removed: [], failedInstall: [], failedRemove: [] };
 
   if (opts.dryRun) {
@@ -193,21 +205,33 @@ export function applyExtensionPlan(target: DetectedPlatform, plan: ExtensionSync
 
   const bin = findCliBin(target);
   if (!bin) {
-    const reason = `No CLI binary found for ${target.def.displayName} — install the editor's shell command from the command palette and retry.`;
+    const reason = `No CLI binary found for ${target.def.displayName}. Install the editor's shell command from the command palette and retry.`;
     for (const id of plan.toInstall) result.failedInstall.push({ id, reason });
     for (const id of plan.toRemove) result.failedRemove.push({ id, reason });
     return result;
   }
 
   for (const id of plan.toInstall) {
-    const r = spawnSync(bin, ["--install-extension", id, "--force"], { encoding: "utf8" });
-    if (r.status === 0) result.installed.push(id);
-    else result.failedInstall.push({ id, reason: (r.stderr || r.stdout || `exit ${r.status}`).trim() });
+    opts.onStart?.(`installing ${id}`);
+    const r = spawnEditor(bin, ["--install-extension", id, "--force"]);
+    if (r.status === 0) {
+      result.installed.push(id);
+      opts.onFinish?.(`installed ${id}`, "ok");
+    } else {
+      result.failedInstall.push({ id, reason: (r.stderr || r.stdout || `exit ${r.status}`).trim() });
+      opts.onFinish?.(`failed ${id}`, "fail");
+    }
   }
   for (const id of plan.toRemove) {
-    const r = spawnSync(bin, ["--uninstall-extension", id], { encoding: "utf8" });
-    if (r.status === 0) result.removed.push(id);
-    else result.failedRemove.push({ id, reason: (r.stderr || r.stdout || `exit ${r.status}`).trim() });
+    opts.onStart?.(`uninstalling ${id}`);
+    const r = spawnEditor(bin, ["--uninstall-extension", id]);
+    if (r.status === 0) {
+      result.removed.push(id);
+      opts.onFinish?.(`uninstalled ${id}`, "ok");
+    } else {
+      result.failedRemove.push({ id, reason: (r.stderr || r.stdout || `exit ${r.status}`).trim() });
+      opts.onFinish?.(`failed to uninstall ${id}`, "fail");
+    }
   }
 
   return result;

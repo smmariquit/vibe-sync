@@ -83,6 +83,33 @@ Not synced: `globalStorage/`, `workspaceStorage/`, `History/`, auth state. These
 - `--dry-run` skips all writes, including extension installs.
 - Extensions are installed through the editor's own CLI, so signing and permissions are unchanged.
 
+## Platform support
+
+| OS      | Status   | Notes |
+| ------- | -------- | ----- |
+| Linux   | Tested   | Works on any distro that puts editor configs under `~/.config/`. |
+| macOS   | Works    | Editor data resolved under `~/Library/Application Support/`. |
+| Windows | Works    | Uses `%APPDATA%` and resolves editor `.cmd` shims via shell spawn. |
+
+### Known limitations
+
+- **Editor CLI on PATH is required for extension sync.** Most forks ship a "Shell Command: Install '<editor>' command in PATH" entry in their command palette - run it once, then `extension list` and `extension sync` work. Without it, vibe-sync can still read installed extensions via the filesystem scanner but cannot install or uninstall.
+- **Marketplace fragmentation.** Each fork uses a different extension gallery. `anysphere.*` extensions only exist in Cursor, `google.*` in Antigravity, and Microsoft-only extensions like `ms-vscode.cpptools` only install in official VS Code. vibe-sync detects and skips known fork-exclusive extensions; pass `--include-incompatible` to override.
+- **Default profile only.** VSCode and its forks support named profiles under `<userDataDir>/profiles/`. vibe-sync only touches the Default profile; if other profiles are present, you'll see a warning during sync.
+- **Microsoft Store VSCode (Windows).** The Store version uses a sandboxed install path that vibe-sync does not resolve. The MSI/User installer of VSCode works fine.
+- **Settings sync state.** vibe-sync does not interact with VSCode's built-in Settings Sync. If you have it enabled on the source, the synced files reflect the most recent local merge.
+- **Secrets are not synced.** Tokens stored in the OS keychain (`globalStorage`, secret store) stay local to each install.
+
+### PowerShell users
+
+If you want to run a publish or scripted invocation that needs `.env` values, the bash one-liner `set -a; source .env; set +a` does not work in PowerShell. Use:
+
+```powershell
+Get-Content .env | ForEach-Object {
+  if ($_ -match '^\s*([^#=]+)=(.*)$') { $env:($matches[1]) = $matches[2] }
+}
+```
+
 ## Adding a new fork
 
 Add an entry to `PLATFORMS` in `src/platforms.ts` with the editor's product name and CLI binary. Every command picks it up.

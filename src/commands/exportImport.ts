@@ -6,6 +6,7 @@ import { applyExtensionPlan, listExtensions, planExtensionSync, type ExtensionIn
 import { copyAny } from "../sync/files.js";
 import { ensureDir, writeFileSafe } from "../utils/fs.js";
 import { c, log } from "../utils/log.js";
+import { Progress } from "../utils/progress.js";
 
 const PROFILE_FILES = ["settings.json", "keybindings.json", "tasks.json"];
 
@@ -93,7 +94,17 @@ export function runImport(bundlePath: string, platformId: string, opts: ImportOp
     log.raw(`extensions: ${c.green(`+${plan.toInstall.length}`)} ${c.red(`-${plan.toRemove.length}`)}${skipBadge} ${c.dim(`(=${plan.alreadyPresent.length})`)}`);
     for (const id of plan.skippedIncompatible)
       log.dim(`  ~ ${id} (skipped: not available on this fork)`);
-    const applied = applyExtensionPlan(target, plan, { dryRun: Boolean(opts.dryRun) });
+
+    const totalOps = plan.toInstall.length + plan.toRemove.length;
+    const progress = totalOps > 0 && !opts.dryRun
+      ? new Progress({ total: totalOps, prefix: "  " })
+      : undefined;
+    const applied = applyExtensionPlan(target, plan, {
+      dryRun: Boolean(opts.dryRun),
+      onStart: (label) => progress?.start(label),
+      onFinish: (label, status) => progress?.finish(label, status),
+    });
+    progress?.done();
     if (applied.failedInstall.length || applied.failedRemove.length) {
       for (const f of applied.failedInstall) log.warn(`install failed: ${f.id} — ${f.reason}`);
       for (const f of applied.failedRemove) log.warn(`uninstall failed: ${f.id} — ${f.reason}`);

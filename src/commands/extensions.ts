@@ -1,6 +1,7 @@
 import { resolvePlatform } from "../platforms.js";
 import { applyExtensionPlan, isCliAvailable, listExtensions, planExtensionSync } from "../sync/extensions.js";
 import { c, log } from "../utils/log.js";
+import { Progress } from "../utils/progress.js";
 
 export interface ExtListOptions {
   json?: boolean;
@@ -44,7 +45,16 @@ export function runExtSync(fromId: string, toId: string, opts: ExtSyncOptions): 
   for (const id of plan.skippedIncompatible)
     log.raw(`  ${c.yellow("~")} ${id} ${c.dim("(skipped: not available on this fork)")}`);
 
-  const applied = applyExtensionPlan(to, plan, { dryRun: Boolean(opts.dryRun) });
+  const totalOps = plan.toInstall.length + plan.toRemove.length;
+  const progress = totalOps > 0 && !opts.dryRun
+    ? new Progress({ total: totalOps, prefix: "  " })
+    : undefined;
+  const applied = applyExtensionPlan(to, plan, {
+    dryRun: Boolean(opts.dryRun),
+    onStart: (label) => progress?.start(label),
+    onFinish: (label, status) => progress?.finish(label, status),
+  });
+  progress?.done();
   if (applied.failedInstall.length || applied.failedRemove.length) {
     for (const f of applied.failedInstall) log.warn(`install failed: ${f.id} — ${f.reason}`);
     for (const f of applied.failedRemove) log.warn(`uninstall failed: ${f.id} — ${f.reason}`);

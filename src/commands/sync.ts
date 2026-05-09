@@ -5,6 +5,7 @@ import { detectInstalled, listProfiles, resolvePlatform, type DetectedPlatform }
 import { applyExtensionPlan, listExtensions, planExtensionSync } from "../sync/extensions.js";
 import { SYNC_KINDS, syncFiles, type SyncKind } from "../sync/files.js";
 import { c, log } from "../utils/log.js";
+import { Progress } from "../utils/progress.js";
 
 export interface SyncOptions {
   from?: string;
@@ -169,7 +170,17 @@ export async function runSync(opts: SyncOptions): Promise<number> {
       for (const id of plan.toRemove) log.dim(`     - ${id}`);
       for (const id of plan.skippedIncompatible)
         log.dim(`     ~ ${id} ${c.dim("(skipped: not available on this fork)")}`);
-      const applied = applyExtensionPlan(target, plan, { dryRun: Boolean(opts.dryRun) });
+
+      const totalOps = plan.toInstall.length + plan.toRemove.length;
+      const progress = totalOps > 0 && !opts.dryRun
+        ? new Progress({ total: totalOps, prefix: "     " })
+        : undefined;
+      const applied = applyExtensionPlan(target, plan, {
+        dryRun: Boolean(opts.dryRun),
+        onStart: (label) => progress?.start(label),
+        onFinish: (label, status) => progress?.finish(label, status),
+      });
+      progress?.done();
       if (applied.failedInstall.length || applied.failedRemove.length) {
         exitCode = 2;
         for (const f of applied.failedInstall) log.warn(`     install failed: ${f.id} — ${f.reason}`);
