@@ -117,3 +117,12 @@ Add an entry to `PLATFORMS` in `src/platforms.ts` with the editor's product name
 ## License
 
 MIT
+
+## 📊 Current State of the Code
+- **Tech Stack:** Node.js/NPM
+- **Repository Size:** 29 tracked files
+- **Latest Update:** `7b29d8b chore: add stale issue and PR validators`
+
+
+---
+*☕ If you found this project useful, you can support my work at [kape.stimmie.dev](https://kape.stimmie.dev)!*
