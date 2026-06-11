@@ -1,3 +1,5 @@
+// src/commands/diff.ts
+
 import { join } from "node:path";
 
 import { resolvePlatform, type DetectedPlatform } from "../platforms.js";

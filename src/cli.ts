@@ -1,3 +1,5 @@
+// src/cli.ts
+
 import { Command, Option } from "commander";
 
 import { runDetect } from "./commands/detect.js";

@@ -1,3 +1,5 @@
+// src/platforms.ts
+
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { homedir, platform as osPlatform } from "node:os";
 import { join } from "node:path";

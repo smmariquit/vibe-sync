@@ -1,3 +1,5 @@
+// src/utils/progress.ts
+
 import pc from "picocolors";
 
 export interface ProgressOptions {

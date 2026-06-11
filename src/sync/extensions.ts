@@ -1,3 +1,5 @@
+// src/sync/extensions.ts
+
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";

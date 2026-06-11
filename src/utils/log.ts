@@ -1,3 +1,5 @@
+// src/utils/log.ts
+
 import pc from "picocolors";
 
 export const log = {

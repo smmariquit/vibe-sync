@@ -1,3 +1,5 @@
+// src/commands/sync.ts
+
 import { join } from "node:path";
 import prompts from "prompts";
 

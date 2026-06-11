@@ -1,3 +1,5 @@
+// src/commands/detect.ts
+
 import { detectAll } from "../platforms.js";
 import { isCliAvailable, listExtensions } from "../sync/extensions.js";
 import { c, log } from "../utils/log.js";

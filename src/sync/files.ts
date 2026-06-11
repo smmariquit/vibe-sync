@@ -1,3 +1,5 @@
+// src/sync/files.ts
+
 import { existsSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 

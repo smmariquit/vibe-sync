@@ -1,3 +1,5 @@
+// src/commands/extensions.ts
+
 import { resolvePlatform } from "../platforms.js";
 import { applyExtensionPlan, isCliAvailable, listExtensions, planExtensionSync } from "../sync/extensions.js";
 import { c, log } from "../utils/log.js";

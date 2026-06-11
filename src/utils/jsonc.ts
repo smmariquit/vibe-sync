@@ -1,3 +1,5 @@
+// src/utils/jsonc.ts
+
 import { assign, parse, stringify } from "comment-json";
 
 export function parseJsonc<T = unknown>(text: string): T {
