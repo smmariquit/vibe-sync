@@ -106,7 +106,7 @@ If you want to run a publish or scripted invocation that needs `.env` values, th
 
 ```powershell
 Get-Content .env | ForEach-Object {
-  if ($_ -match '^\s*([^#=]+)=(.*)$') { $env:($matches[1]) = $matches[2] }
+ if ($_ -match '^\s*([^#=]+)=(.*)$') { $env:($matches[1]) = $matches[2] }
 }
 ```
 
